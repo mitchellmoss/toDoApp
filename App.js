@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert, ToastAndroid } from 'react-native';
 
 export default function App() {
   const [todoItems, setTodoItems] = useState([]);
@@ -67,10 +68,39 @@ export default function App() {
       <Text style={[styles.todoText, item.completed && styles.completedTodoText]}>
         {item.text}
       </Text>
-      <Text style={styles.dateText}>{item.date}</Text>
+      <View style={styles.dateContainer}>
+        <Text style={styles.dateText}>{item.date}</Text>
+      </View>
+      {item.completed && (
+        <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item.id)}>
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
-
+  const confirmDelete = (id) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this task?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: () => deleteTodoItem(id),
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+  const deleteTodoItem = (id) => {
+    const updatedTodoItems = todoItems.filter((item) => item.id !== id);
+    setTodoItems(updatedTodoItems);
+    saveTodoItems();
+    ToastAndroid.show('Task deleted successfully', ToastAndroid.SHORT);
+  };
   return (
     <View style={styles.container}>
       <Text style={styles.title}>To-Do List</Text>
@@ -173,5 +203,19 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: 'gray',
+  },
+  dateContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingRight: 10,
+  },
+  deleteButton: {
+    backgroundColor: 'red',
+    padding: 5,
+    borderRadius: 5,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 12,
   },
 });
