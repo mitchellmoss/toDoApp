@@ -255,11 +255,14 @@ const App = () => {
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={todoItems}
-        renderItem={renderTodoItem}
-        keyExtractor={(item) => item.id}
-      />
+      <View style={styles.listContainer}>
+          <FlatList
+          data={todoItems}
+          renderItem={renderTodoItem}
+          keyExtractor={(item) => item.id}
+          style={styles.flatList}
+        />
+      </View>
       {showDatePicker && (
         <DateTimePickerModal
         isVisible={showDatePicker}
@@ -276,12 +279,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FAC2C2', // Pastel blue
+    paddingTop: 40, // Add padding to the top
+    paddingBottom: 20, // Add padding to the bottom
+  },
+  listContainer: {
+    flex: 1,
+    backgroundColor: '#F0F8FF', // Pastel blue
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#FFA07A', // Pastel orange
   },
   inputContainer: {
     flexDirection: 'row',
@@ -291,13 +301,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ADD8E6', // Pastel blue
     borderRadius: 5,
     paddingHorizontal: 10,
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#87CEEB', // Pastel blue
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 5,
@@ -316,13 +326,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: '#FFFFE0', // Pastel yellow
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   completedRadioButton: {
-    borderColor: 'green',
+    borderColor: '#98FB98', // Pastel green
   },
   radioButtonIcon: {
     width: 12,
@@ -331,21 +341,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   completedRadioButtonIcon: {
-    backgroundColor: 'green',
+    backgroundColor: '#98FB98', // Pastel green
   },
   todoText: {
     flex: 1,
     fontSize: 16,
+    color: '#FFA07A', // Pastel orange
   },
   completedTodoText: {
     textDecorationLine: 'line-through',
-    color: '#ccc',
+    color: '#FFFFE0', // Pastel yellow
   },
   deleteButton: {
-    backgroundColor: 'red',
+    backgroundColor: '#FFC0CB', // Pastel pink
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
+    shadowColor: '#000', // Shadow color
+    marginLeft: 10, // Add margin to create spacing between buttons
+
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // Required for shadow on Android
   },
   deleteButtonText: {
     color: 'white',
@@ -365,13 +386,13 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ADD8E6', // Pastel blue
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   completedSubTaskRadioButton: {
-    borderColor: 'green',
+    borderColor: '#98FB98', // Pastel green
   },
   subTaskRadioButtonIcon: {
     width: 10,
@@ -380,26 +401,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   completedSubTaskRadioButtonIcon: {
-    backgroundColor: 'green',
+    backgroundColor: '#98FB98', // Pastel green
   },
   subTaskText: {
     flex: 1,
     fontSize: 14,
+    color: '#FFA07A', // Pastel orange
   },
   completedSubTaskText: {
     textDecorationLine: 'line-through',
-    color: '#ccc',
+    color: '#FFFFE0', // Pastel yellow
   },
   subTaskInput: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ADD8E6', // Pastel blue
     borderRadius: 5,
     paddingHorizontal: 10,
     marginTop: 5,
   },
   alarmButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#87CEEB', // Pastel blue
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
@@ -411,11 +433,11 @@ const styles = StyleSheet.create({
   },
   alarmText: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFA07A', // Pastel orange
     marginLeft: 10,
   },
   subTaskAlarmButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#87CEEB', // Pastel blue
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
@@ -427,24 +449,27 @@ const styles = StyleSheet.create({
   },
   subTaskAlarmText: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFA07A', // Pastel orange
     marginLeft: 10,
   },
   expandButton: {
-    backgroundColor: 'gray',
+    backgroundColor: '#E0FFFF', // Pastel cyan
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
-    marginLeft: 10,
+    marginLeft: 10, // Add margin to create spacing between buttons
   },
   expandButtonText: {
-    color: 'white',
+    color: '#FFA07A', // Pastel orange
     fontSize: 12,
   },
   dateText: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFA07A', // Pastel orange
     marginLeft: 10,
+  },
+  flatList: {
+    backgroundColor: '#FAC2C2', // Pastel blue
   },
 });
 
