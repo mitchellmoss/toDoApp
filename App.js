@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Alert, ToastAndroid } from 'react-native';import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Alert, ToastAndroid } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+
+
 
 const App = () => {
   const [todoItems, setTodoItems] = useState([]);
@@ -128,33 +134,133 @@ const App = () => {
     setShowDatePicker(true);
   };
 
-  const handleAlarmSet = (selectedDate) => {
+
+  useEffect(() => {
+    // Request push notification permissions
+    async function requestPermissions() {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Failed to get push token for push notification!');
+        return;
+      }
+    }
+  
+    // Handle incoming notifications when the app is in the foreground
+    const foregroundSubscription = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification received in foreground:', notification);
+      // Handle the received notification as needed
+      // You can display an alert, update the app state, or perform any other desired actions
+      Alert.alert(
+        'New Notification',
+        notification.request.content.body,
+        [{ text: 'OK', onPress: () => console.log('OK Pressed') }],
+        { cancelable: false }
+      );
+    });
+  
+    // Handle incoming notifications when the app is in the background or closed
+  const backgroundSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    console.log('Notification response received:', response);
+    const { taskId, subTaskId } = response.notification.request.content.data;
+
+    // Navigate to the appropriate task or subtask based on the received data
+    if (taskId) {
+      // Find the task with the matching taskId
+      const task = todoItems.find((item) => item.id === taskId);
+      if (task) {
+        // Perform navigation or any other desired action
+        console.log('Navigating to task:', task);
+        // Example navigation: navigation.navigate('TaskDetails', { task });
+      }
+
+      if (subTaskId) {
+        // Find the subtask with the matching subTaskId within the task
+        const subTask = task.subTasks.find((item) => item.id === subTaskId);
+        if (subTask) {
+          // Perform navigation or any other desired action
+          console.log('Navigating to subtask:', subTask);
+          // Example navigation: navigation.navigate('SubTaskDetails', { subTask });
+        }
+      }
+    }
+  });
+  
+    // Set up the background notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  
+    // Clean up the subscriptions and listeners when the component unmounts
+    return () => {
+      foregroundSubscription.remove();
+      backgroundSubscription.remove();
+    };
+  }, []);
+
+  const handleAlarmSet = async (selectedDate) => {
     setShowDatePicker(false);
-
+  
     if (selectedDate) {
-      const alarmTime = selectedDate.toLocaleString();
-
-      const updatedTodoItems = todoItems.map((item) => {
-        if (item.id === selectedTaskId) {
+      const alarmTime = selectedDate.getTime();
+      const currentTime = Date.now();
+  
+      if (alarmTime > currentTime) {
+        let notificationTitle = 'To Do Alarm!!!';
+        let notificationBody = 'Your To Do Alarm has been Triggered!';
+      
+        // Find the task with the matching taskId
+        const task = todoItems.find((item) => item.id === selectedTaskId);
+        if (task) {
+          notificationTitle = `Alarm for Task: ${task.text}`;
           if (selectedSubTaskId) {
-            const updatedSubTasks = item.subTasks.map((subTask) => {
-              if (subTask.id === selectedSubTaskId) {
-                return { ...subTask, alarmTime };
-              }
-              return subTask;
-            });
-            return { ...item, subTasks: updatedSubTasks };
-          } else {
-            return { ...item, alarmTime };
+            // Find the subtask with the matching subTaskId within the task
+            const subTask = task.subTasks.find((item) => item.id === selectedSubTaskId);
+            if (subTask) {
+              notificationBody = `Alarm for Subtask: ${subTask.text}`;
+            }
           }
         }
-        return item;
-      });
-
-      setTodoItems(updatedTodoItems);
-      saveTodoItems();
+      
+        // Schedule the local notification using Expo Notifications
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: notificationTitle,
+            body: notificationBody,
+            data: { taskId: selectedTaskId, subTaskId: selectedSubTaskId },
+          },
+          trigger: {
+            date: selectedDate,
+          },
+        });
+  
+        const updatedTodoItems = todoItems.map((item) => {
+          if (item.id === selectedTaskId) {
+            if (selectedSubTaskId) {
+              const updatedSubTasks = item.subTasks.map((subTask) => {
+                if (subTask.id === selectedSubTaskId) {
+                  return { ...subTask, alarmTime: selectedDate.toLocaleString() };
+                }
+                return subTask;
+              });
+              return { ...item, subTasks: updatedSubTasks };
+            } else {
+              return { ...item, alarmTime: selectedDate.toLocaleString() };
+            }
+          }
+          return item;
+        });
+  
+        setTodoItems(updatedTodoItems);
+        saveTodoItems();
+      } else {
+        Alert.alert('Invalid Alarm', 'Please select a future date and time for the alarm.');
+      }
     }
-
+  
     setSelectedTaskId(null);
     setSelectedSubTaskId(null);
   };
@@ -240,6 +346,8 @@ const App = () => {
       )}
     </>
   );
+
+  
 
   return (
     <View style={styles.container}>
