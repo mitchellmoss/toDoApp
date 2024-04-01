@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, ToastAndroid } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Alert, ToastAndroid } from 'react-native';import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
-export default function App() {
+const App = () => {
   const [todoItems, setTodoItems] = useState([]);
   const [inputText, setInputText] = useState('');
   const [subTaskInputText, setSubTaskInputText] = useState('');
-
-  
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [selectedSubTaskId, setSelectedSubTaskId] = useState(null);
 
   useEffect(() => {
     loadTodoItems();
@@ -18,12 +18,7 @@ export default function App() {
     try {
       const storedTodoItems = await AsyncStorage.getItem('todoItems');
       if (storedTodoItems !== null) {
-        const parsedTodoItems = JSON.parse(storedTodoItems);
-        const updatedTodoItems = parsedTodoItems.map((item) => ({
-          ...item,
-          subTasks: item.subTasks || [], // Initialize subTasks if not present
-        }));
-        setTodoItems(updatedTodoItems);
+        setTodoItems(JSON.parse(storedTodoItems));
       }
     } catch (error) {
       console.log('Error loading todo items:', error);
@@ -45,27 +40,15 @@ export default function App() {
         text: inputText,
         completed: false,
         date: new Date().toLocaleDateString(),
-        subTasks: [], // Initialize subTasks as an empty array
-        expanded: false,
+        subTasks: [],
+        expanded: false, // Add the expanded property
       };
       setTodoItems([...todoItems, newItem]);
       setInputText('');
       saveTodoItems();
     }
   };
-  const SubTaskItem = ({ subTask, onToggle }) => (
-    <View style={styles.subTaskItem}>
-      <TouchableOpacity
-        style={[styles.subTaskRadioButton, subTask.completed && styles.completedSubTaskRadioButton]}
-        onPress={onToggle}
-      >
-        <View style={[styles.subTaskRadioButtonIcon, subTask.completed && styles.completedSubTaskRadioButtonIcon]} />
-      </TouchableOpacity>
-      <Text style={[styles.subTaskText, subTask.completed && styles.completedSubTaskText]}>
-        {subTask.text}
-      </Text>
-    </View>
-  );
+
   const toggleTodoItem = (id) => {
     const updatedTodoItems = todoItems.map((item) => {
       if (item.id === id) {
@@ -77,64 +60,31 @@ export default function App() {
     saveTodoItems();
   };
 
-  const renderTodoItem = ({ item }) => (
-    <>
-      <TouchableOpacity style={styles.todoItem} onPress={() => toggleExpandCollapse(item.id)}>
-        <TouchableOpacity
-          style={[styles.radioButton, item.completed && styles.completedRadioButton]}
-          onPress={() => toggleTodoItem(item.id)}
-        >
-          <View style={[styles.radioButtonIcon, item.completed && styles.completedRadioButtonIcon]} />
-        </TouchableOpacity>
-        <Text style={[styles.todoText, item.completed && styles.completedTodoText]}>
-          {item.text}
-        </Text>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateText}>{item.date}</Text>
-        </View>
-        {item.completed && (
-          <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item.id)}>
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-      {item.expanded && (
-      <View style={styles.subTasksContainer}>
-        {item.subTasks.map((subTask) => (
-          <SubTaskItem
-            key={subTask.id}
-            subTask={subTask}
-            onToggle={() => toggleSubTask(item.id, subTask.id)}
-          />
-        ))}
-        <TextInput
-          style={styles.subTaskInput}
-          placeholder="Add sub-task"
-          value={subTaskInputText}
-          onChangeText={setSubTaskInputText}
-          onSubmitEditing={() => {
-            addSubTask(item.id);
-            setSubTaskInputText('');
-          }}
-        />
-      </View>
-    )}
-  </>
-);
-  const toggleExpandCollapse = (id) => {
-    const updatedTodoItems = todoItems.map((item) => {
-      if (item.id === id) {
-        return { ...item, expanded: !item.expanded };
-      }
-      return item;
-    });
-    setTodoItems(updatedTodoItems);
+  const deleteTodoItem = (id) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this item?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: () => {
+            const updatedTodoItems = todoItems.filter((item) => item.id !== id);
+            setTodoItems(updatedTodoItems);
+            saveTodoItems();
+            ToastAndroid.show('Item deleted successfully', ToastAndroid.SHORT);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
-  
+
   const toggleSubTask = (todoItemId, subTaskId) => {
-    const updatedTodoItems
-  
-   = todoItems.map((item) => {
+    const updatedTodoItems = todoItems.map((item) => {
       if (item.id === todoItemId) {
         const updatedSubTasks = item.subTasks.map((subTask) => {
           if (subTask.id === subTaskId) {
@@ -149,7 +99,7 @@ export default function App() {
     setTodoItems(updatedTodoItems);
     saveTodoItems();
   };
-  
+
   const addSubTask = (todoItemId) => {
     if (subTaskInputText.trim() !== '') {
       const newSubTask = {
@@ -164,44 +114,145 @@ export default function App() {
         return item;
       });
       setTodoItems(updatedTodoItems);
+      setSubTaskInputText('');
       saveTodoItems();
     }
   };
-  const confirmDelete = (id) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this task?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: () => deleteTodoItem(id),
-        },
-      ],
-      { cancelable: true }
-    );
+
+  const setAlarm = (taskId, subTaskId = null) => {
+    if (subTaskId) {
+      setSelectedSubTaskId(subTaskId);
+    } else {
+      setSelectedTaskId(taskId);
+    }
+    setShowDatePicker(true);
   };
-  const deleteTodoItem = (id) => {
-    const updatedTodoItems = todoItems.filter((item) => item.id !== id);
+
+  const handleAlarmSet = (selectedDate) => {
+    setShowDatePicker(false);
+
+    if (selectedDate) {
+      const alarmTime = selectedDate.toLocaleString();
+
+      const updatedTodoItems = todoItems.map((item) => {
+        if (item.id === selectedTaskId) {
+          if (selectedSubTaskId) {
+            const updatedSubTasks = item.subTasks.map((subTask) => {
+              if (subTask.id === selectedSubTaskId) {
+                return { ...subTask, alarmTime };
+              }
+              return subTask;
+            });
+            return { ...item, subTasks: updatedSubTasks };
+          } else {
+            return { ...item, alarmTime };
+          }
+        }
+        return item;
+      });
+
+      setTodoItems(updatedTodoItems);
+      saveTodoItems();
+    }
+
+    setSelectedTaskId(null);
+    setSelectedSubTaskId(null);
+  };
+  const toggleExpandCollapse = (id) => {
+    const updatedTodoItems = todoItems.map((item) => {
+      if (item.id === id) {
+        return { ...item, expanded: !item.expanded };
+      }
+      return item;
+    });
     setTodoItems(updatedTodoItems);
-    saveTodoItems();
-    ToastAndroid.show('Task deleted successfully', ToastAndroid.SHORT);
   };
+  const TodoItem = ({ item, onToggle, onDelete, onSetAlarm, onToggleExpand }) => (
+    <View style={styles.todoItem}>
+      <TouchableOpacity
+        style={[styles.radioButton, item.completed && styles.completedRadioButton]}
+        onPress={onToggle}
+      >
+        <View style={[styles.radioButtonIcon, item.completed && styles.completedRadioButtonIcon]} />
+      </TouchableOpacity>
+      <Text style={[styles.todoText, item.completed && styles.completedTodoText]}>{item.text}</Text>
+      <TouchableOpacity style={styles.expandButton} onPress={onToggleExpand}>
+        <Text style={styles.expandButtonText}>{item.expanded ? '-' : '+'}</Text>
+      </TouchableOpacity>
+      {item.expanded && (
+        <>
+          <Text style={styles.dateText}>{item.date}</Text>
+          <TouchableOpacity style={styles.alarmButton} onPress={onSetAlarm}>
+            <Text style={styles.alarmButtonText}>Set Alarm</Text>
+          </TouchableOpacity>
+          {item.alarmTime && <Text style={styles.alarmText}>{item.alarmTime}</Text>}
+        </>
+      )}
+      <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const SubTaskItem = ({ subTask, onToggle, onSetAlarm }) => (
+    <View style={styles.subTaskItem}>
+      <TouchableOpacity
+        style={[styles.subTaskRadioButton, subTask.completed && styles.completedSubTaskRadioButton]}
+        onPress={onToggle}
+      >
+        <View style={[styles.subTaskRadioButtonIcon, subTask.completed && styles.completedSubTaskRadioButtonIcon]} />
+      </TouchableOpacity>
+      <Text style={[styles.subTaskText, subTask.completed && styles.completedSubTaskText]}>{subTask.text}</Text>
+      <TouchableOpacity style={styles.subTaskAlarmButton} onPress={onSetAlarm}>
+        <Text style={styles.subTaskAlarmButtonText}>Set Alarm</Text>
+      </TouchableOpacity>
+      {subTask.alarmTime && <Text style={styles.subTaskAlarmText}>{subTask.alarmTime}</Text>}
+    </View>
+  );
+
+  const renderTodoItem = ({ item }) => (
+    <>
+      <TodoItem
+        item={item}
+        onToggle={() => toggleTodoItem(item.id)}
+        onDelete={() => deleteTodoItem(item.id)}
+        onSetAlarm={() => setAlarm(item.id)}
+        onToggleExpand={() => toggleExpandCollapse(item.id)}
+      />
+      {item.expanded && (
+        <View style={styles.subTasksContainer}>
+          {item.subTasks.map((subTask) => (
+            <SubTaskItem
+              key={subTask.id}
+              subTask={subTask}
+              onToggle={() => toggleSubTask(item.id, subTask.id)}
+              onSetAlarm={() => setAlarm(item.id, subTask.id)}
+            />
+          ))}
+          <TextInput
+            style={styles.subTaskInput}
+            placeholder="Add sub-task"
+            value={subTaskInputText}
+            onChangeText={setSubTaskInputText}
+            onSubmitEditing={() => addSubTask(item.id)}
+          />
+        </View>
+      )}
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>To-Do List</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Enter a to-do item"
+          placeholder="Enter a task"
           value={inputText}
           onChangeText={setInputText}
         />
         <TouchableOpacity style={styles.addButton} onPress={addTodoItem}>
-          <Text style={styles.addButtonText}>+</Text>
+          <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
       <FlatList
@@ -209,15 +260,23 @@ export default function App() {
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
       />
+      {showDatePicker && (
+        <DateTimePickerModal
+        isVisible={showDatePicker}
+        mode="datetime"
+        onConfirm={handleAlarmSet}
+        onCancel={() => setShowDatePicker(false)}
+      />
+      )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'rgba(255, 255, 204, 1)', // Light yellow color with full opacity
+    backgroundColor: '#F5F5F5',
   },
   title: {
     fontSize: 24,
@@ -231,22 +290,21 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 40,
-    borderColor: 'gray',
     borderWidth: 1,
-    marginRight: 10,
+    borderColor: '#ccc',
+    borderRadius: 5,
     paddingHorizontal: 10,
+    marginRight: 10,
   },
   addButton: {
-    backgroundColor: '#7FDEEA',
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
+    backgroundColor: 'blue',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
   },
   addButtonText: {
     color: 'white',
-    fontSize: 24,
+    fontWeight: 'bold',
   },
   todoItem: {
     flexDirection: 'row',
@@ -258,13 +316,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'gray',
+    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   completedRadioButton: {
-    borderColor: '#A8DEA2',
+    borderColor: 'green',
   },
   radioButtonIcon: {
     width: 12,
@@ -273,34 +331,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   completedRadioButtonIcon: {
-    backgroundColor: '#A8DEA2',
+    backgroundColor: 'green',
   },
   todoText: {
     flex: 1,
     fontSize: 16,
-    marginRight: 10,
-  },
-  todoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
   },
   completedTodoText: {
     textDecorationLine: 'line-through',
-    color: 'gray',
-  },
-  dateText: {
-    fontSize: 12,
-    color: 'gray',
-  },
-  dateContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-    paddingRight: 10,
+    color: '#ccc',
   },
   deleteButton: {
     backgroundColor: 'red',
-    padding: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 5,
   },
   deleteButtonText: {
@@ -309,6 +353,7 @@ const styles = StyleSheet.create({
   },
   subTasksContainer: {
     marginLeft: 20,
+    marginBottom: 10,
   },
   subTaskItem: {
     flexDirection: 'row',
@@ -320,13 +365,13 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   completedSubTaskRadioButton: {
-    borderColor: 'blue',
+    borderColor: 'green',
   },
   subTaskRadioButtonIcon: {
     width: 10,
@@ -335,20 +380,72 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   completedSubTaskRadioButtonIcon: {
-    backgroundColor: 'blue',
+    backgroundColor: 'green',
   },
   subTaskText: {
+    flex: 1,
     fontSize: 14,
   },
   completedSubTaskText: {
     textDecorationLine: 'line-through',
-    color: 'gray',
+    color: '#ccc',
   },
   subTaskInput: {
     height: 40,
-    borderColor: 'gray',
     borderWidth: 1,
-    marginTop: 5,
+    borderColor: '#ccc',
+    borderRadius: 5,
     paddingHorizontal: 10,
+    marginTop: 5,
+  },
+  alarmButton: {
+    backgroundColor: 'blue',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  alarmButtonText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  alarmText: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 10,
+  },
+  subTaskAlarmButton: {
+    backgroundColor: 'blue',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  subTaskAlarmButtonText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  subTaskAlarmText: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 10,
+  },
+  expandButton: {
+    backgroundColor: 'gray',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  expandButtonText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 10,
   },
 });
+
+export default App;
